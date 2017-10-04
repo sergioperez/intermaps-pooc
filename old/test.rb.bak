@@ -1,0 +1,31 @@
+#TODO:
+#	unit = char?
+#
+# Reqs: Ruby >= 1.9.1
+
+require 'csv'
+require_relative 'lib/CountryEntry.rb'
+
+DEBUG = true
+
+#Cabeceras: año, mes, iso, paísreportante, artículo,unidad,país socio,valor,cantidad
+
+csv_txt = File.read("./csv/exp.csv", :encoding => 'ISO8859-1').encode("UTF-8")
+csv = CSV.parse(csv_txt, :headers => true )
+
+i = 0
+
+csv.each do |row|
+	#Creating instance for the entry
+	entry = CountryEntry.new(row)
+	#TODO: Se puede comentar, algo de rendimiento se ganará	
+	entry.print if DEBUG && i == 8
+
+	if i == 0
+		puts entry.year
+		entry.year = 0
+		puts entry.year
+	end
+
+	i += 1
+end

@@ -1,0 +1,3 @@
+sequel
+ruby >= 1.9.1
+

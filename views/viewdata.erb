@@ -1,0 +1,167 @@
+<%# 
+	This view receives as arguments:
+		results
+		=> data is an array of CountryEntry elements
+%>
+
+<%#Hay una parte que podría ser un poco caos:
+	reduced_data es una variable en la que se guarda la suma de compra de TODOS los artículos
+		de la query, por lo que si USA ha comprado un artículo 01030 y otro 02040, ambos de
+		Canadá, en reduced_data tendremos el valor de 2 compras de USA a Canadá.
+	Acceso:
+		reduced_data[country]
+
+	reduced_data2 almacena el valor de artículos vendidos para cada uno de los elementos, de manera
+		individual
+	Acceso:
+		reduced_data2[country][article]
+%>
+
+<%require_relative('../lib/CountryNameManager.rb')%>
+<%require_relative('../lib/ViewDataController.rb')%>
+<%controller = ViewDataController.new%>
+<%years = (1990..Time.now.strftime("%Y").to_i)%>
+<%months = (1..12)%>
+<%articles = ["010310", "0", "cosa"]%>
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="../javascript/d3.min.js"></script>
+		<script src="../javascript/topojson.min.js"></script>
+		<script src='../javascript/datamaps.world.min.js'></script>
+		<script src="../javascript/jquery-2.1.4.min.js"></script>
+		<script src="//www.google.com/jsapi"></script>
+		<script src="../javascript/chartkick.js"></script>
+	</head>
+	<body>
+		<form action="viewdata" id="dataform" method="POST">
+			Acción:
+			<select name="action">
+				<option value="imports">Importaciones</option>
+				<option value="exports">Exportaciones</option>
+			</select>
+			<br>
+			Artículo:
+			<select name="article">
+				<% articles.each do |art| %>
+					<option value='<%=art%>'><%=art%></option>
+				<%end%>
+			</select>
+			<br>
+			Desde:
+			<select name="since_year">
+				<% years.each do |year| %>
+					<option value='<%=year%>'><%=year%></option>
+				<%end%>
+			</select>
+			<select name="since_month">
+				<% months.each do |month| %>
+					<option value='<%=month%>'><%=month%></option>
+				<%end%>
+			</select>
+			<br>
+			Hasta:
+			<select name="until_year">
+				<% years.each do |year| %>
+                                <option value='<%=year%>'><%=year%></option>
+                                <%end%>
+			</select>
+			<select name="until_month">
+				<% months.each do |month| %>
+                                        <option value='<%=month%>'><%=month%></option>
+                                <%end%>
+			</select>
+			<input type="text" id="countryIsoField" name="country" style="visibility: hidden">
+			<div id="map_container"></div>
+			<br><br>
+			<div id="chart1"></div>
+			
+			<br>
+			<!-- Descomentar si queremos un botón <input type="submit" value="Pedir datos!"> -->
+			<br>
+			<br>
+				<%if showingdata%>
+					Datos recibidos:
+					<%results.each do |res|%>
+						<br>
+						Año:	<%=res.year%><br>
+						Mes:	<%=res.month%><br>
+						From:	<%=res.country_report_iso%><br>
+						Article:	<%=res.article%><br>
+						Weight unit:	<%=res.weight_unit%><br>
+						Country partner:
+						<%=res.country_partner_iso%><br>
+						Value:	<%=res.value%><br>
+						Quantity: <%=res.quantity%><br>
+					<%end%>	
+				<%end%>
+		</form>
+
+		<!--<div id="container" style="position: relative; width: 500px; height: 300px;"></div>-->
+		
+		<script>
+			<%results = Array.new if results == nil%>
+			var map = new Datamap({
+							element: document.getElementById('map_container'),
+							projection: 'mercator',
+							fills:{
+								LEVEL_0: '#80007f',
+								LEVEL_1: '#ff00fe',
+								LEVEL_2: '#ff66fe',
+								LEVEL_3: '#ff99fe',
+								LEVEL_4: '#ffb3fe'
+							},
+							data:{
+								<%#TODO: usar reduced_data
+									TODO: Solo soporta un artículo de momento:(
+								%>
+								<%results.each do |res|%>
+									'<%=controller.get_ISO3(res.country_partner_iso)%>' : { fillKey: '<%=controller.get_level(res.quantity)%>'},
+								<%end%>
+							},
+							done: function(datamap) {
+								datamap.svg.selectAll('.datamaps-subunit').on('click', function(geography) {
+									$("input[name='country']").val(geography.id);
+									//Sending the form
+									$('form#dataform').submit();
+									map.updateChoropleth({});
+								});
+							},
+							responsive: true
+						});
+			window.addEventListener('resize', function() {
+				map.resize();
+			});
+
+			<%if showingdata%>
+				<%="var chart1 = new Chartkick.PieChart(document.getElementById('chart1'), [" if results != nil%>
+				
+				<%reduced_data.keys.each do |name|%>
+				<%=	"['#{controller.get_ISO3(name)}',#{reduced_data[name]}\]"%><%="," if name != reduced_data.keys.last%>
+				<%end%>
+				<%="]);" if results != nil%>
+			<%end%>
+
+			<% #TODO: Esto no debería estar aquí  %>
+			<%if showingdata%>
+				<%reduced_data2.keys.each do |name|%>
+				<%="alert('#{name}');" %>
+				<%="//name"%>
+				<%end%>
+			<%end%>
+
+		</script>
+		<%#TODO: Esto quizás debería ir encima del script%>
+		<%if showingdata%>
+			<%reduced_data2.keys.each do |country|%>
+				<%reduced_data2[country].keys.each do |article|%>
+				<%="<br>"%>
+				<%="#{country},#{article}"%>
+				<%="<br>"%>
+				<%="['#{controller.get_ISO3(country)}',#{reduced_data2[country][article]}\]"%><%="," if country != reduced_data.keys.last%>
+				<%end%>
+			<%end%>
+		<%end%>
+	</body>
+</html>
